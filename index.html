@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>War Room Sandbox v2.1 · built 18 Aug 2026</title>
+<title>War Room Sandbox v2.2 · built 18 Aug 2026</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -29,7 +29,7 @@ h2{font-size:15px} h3{font-size:13px;color:var(--muted)}
 
 header{border-bottom:1px solid var(--line);background:var(--ink);position:sticky;top:0;
   z-index:60;padding-top:env(safe-area-inset-top)}
-.mast{display:flex;align-items:baseline;gap:14px;padding:11px 0 9px;flex-wrap:wrap}
+.mast{display:flex;align-items:baseline;gap:12px;padding:9px 0 7px;flex-wrap:wrap}
 .brand{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:25px;
   letter-spacing:.05em;text-transform:uppercase;line-height:1}
 .brand em{font-style:normal;color:var(--te)}
@@ -44,7 +44,7 @@ header{border-bottom:1px solid var(--line);background:var(--ink);position:sticky
 
 .runwatch{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);
   border-top:1px solid var(--line)}
-.rw{background:var(--panel);padding:8px 10px 9px}
+.rw{background:var(--panel);padding:6px 9px 7px}
 .rw-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
 .rw-pos{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;letter-spacing:.09em}
 .rw-left{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--muted)}
@@ -84,14 +84,14 @@ details.setup[open] summary::before{content:'▾'}
 .sandbar{border-color:var(--te);border-left:3px solid var(--te)}
 .brow{display:flex;gap:7px;flex-wrap:wrap}
 .hide{display:none}
-.tabs{display:flex;gap:0;margin:14px 0 12px;border-bottom:1px solid var(--line);
- position:sticky;top:0;background:var(--ink);z-index:40}
-.tab{flex:1;background:transparent;border:0;border-bottom:2px solid transparent;
- color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:15px;
- letter-spacing:.11em;text-transform:uppercase;font-weight:600;padding:11px 6px;
- cursor:pointer}
+.tabs{display:flex;gap:0;background:var(--ink);border-top:1px solid var(--line)}
+.tab{flex:1;background:transparent;border:0;border-bottom:3px solid transparent;
+ color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:14px;
+ letter-spacing:.09em;text-transform:uppercase;font-weight:600;padding:10px 4px;
+ cursor:pointer;min-width:0;white-space:nowrap}
 .tab:hover{color:var(--paper)}
-.tab[aria-pressed="true"]{color:var(--te);border-bottom-color:var(--te)}
+.tab[aria-pressed="true"]{color:var(--te);border-bottom-color:var(--te);
+ background:rgba(242,169,59,.06)}
 .tab:focus-visible{outline:2px solid var(--te);outline-offset:-2px}
 .tab .badge{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);
  margin-left:5px;letter-spacing:0}
@@ -262,7 +262,7 @@ footer{position:fixed;bottom:0;left:0;right:0;background:var(--ink);border-top:1
     <div class="mast">
       <div>
         <div class="brand">War Room <em>Sandbox</em></div>
-        <div class="sub">Practice mode &middot; simulated room &middot; separate from your live draft &nbsp;&middot;&nbsp; <span class="ver">v2.1 · built 18 Aug 2026</span></div>
+        <div class="sub">Practice mode &middot; simulated room &middot; separate from your live draft &nbsp;&middot;&nbsp; <span class="ver">v2.2 · built 18 Aug 2026</span></div>
       </div>
       <div class="counts">
         <div><b id="cPick">1</b><span>Pick</span></div>
@@ -273,6 +273,12 @@ footer{position:fixed;bottom:0;left:0;right:0;background:var(--ink);border-top:1
     </div>
   </div>
   <div class="runwatch" id="runwatch"></div>
+  <nav class="tabs" id="tabs">
+    <button class="tab" data-pane="board" aria-pressed="true">Board</button>
+    <button class="tab" data-pane="rosters" aria-pressed="false">Rosters</button>
+    <button class="tab" data-pane="log" aria-pressed="false">Draft log</button>
+    <button class="tab" data-pane="study" id="tabStudy" aria-pressed="false" style="display:none">Slot study</button>
+  </nav>
 </header>
 
 <div class="wrap">
@@ -330,13 +336,6 @@ footer{position:fixed;bottom:0;left:0;right:0;background:var(--ink);border-top:1
            placeholder="Type the player just taken &mdash; Enter logs him to the team on the clock">
     <div class="results" id="results"></div>
   </div>
-
-  <nav class="tabs" id="tabs">
-    <button class="tab" data-pane="board" aria-pressed="true">Board</button>
-    <button class="tab" data-pane="rosters" aria-pressed="false">Rosters</button>
-    <button class="tab" data-pane="log" aria-pressed="false">Draft log</button>
-    <button class="tab" data-pane="study" id="tabStudy" aria-pressed="false" style="display:none">Slot study</button>
-  </nav>
 
   <section id="paneBoard">
     <div class="filters" id="filters"></div>
@@ -551,6 +550,7 @@ const ROUNDS_MAX = 18;
 let simCache = null;   // SIMCAP and gauss() are declared once, further down
 let recOpen = true;    // collapsed state of the recommendation panel, remembered
 let pane = 'board';    // which tab is showing
+const picked = new Set();   // active filter chips; empty means everything
 let viewTeam = 0;      // slot whose roster is on screen; 0 means "me"
 
 // Precompute market order per round once; the only round dependence is the
@@ -1117,19 +1117,38 @@ function renderBoard(){
   const taken=takenSet();
   const list=P.filter(p=>!taken.has(p.i)&&passFilter(p)).slice(0,60);
   $('board').innerHTML = list.length?list.map(p=>rowHTML(p,false,taken)).join('')
-    :'<div class="empty-state">No one left matching this filter.</div>';
+    :'<div class="empty-state">Nobody left matching those filters.</div>';
+  const bh=$('boardhint');
+  if(bh) bh.textContent = picked.size
+    ? [...picked].join(' + ')+' · '+list.length+' shown'
+    : 'By adjusted rank';
 }
 const FILTERS=['ALL',...POS,'EARLY','LATE'];
 const FLABEL={EARLY:'BRIDGE · EARLY', LATE:'BRIDGE · LATE'};
+const BRIDGEF=new Set(['EARLY','LATE']);
 function renderFilters(){
-  $('filters').innerHTML=FILTERS.map(f=>
-    '<button class="chip" data-f="'+f+'" aria-pressed="'+(filter===f)+'">'
-    +(FLABEL[f]||f)+'</button>').join('');
+  $('filters').innerHTML=FILTERS.map(f=>{
+    const on = f==='ALL' ? picked.size===0 : picked.has(f);
+    return '<button class="chip" data-f="'+f+'" aria-pressed="'+on+'">'
+      +(FLABEL[f]||f)+'</button>';
+  }).join('');
 }
+/* Chips combine rather than replace, so RB + WR shows both. Positions OR
+   together, bridge windows OR together, and the two groups AND with each
+   other - "RB + WR + EARLY" means early-window backs and receivers. */
 function passFilter(p){
-  if(filter==='ALL') return true;
-  if(filter==='EARLY'||filter==='LATE') return p.br===filter;
-  return p.p===filter;
+  if(!picked.size) return true;
+  const pos=[...picked].filter(f=>!BRIDGEF.has(f));
+  const br=[...picked].filter(f=>BRIDGEF.has(f));
+  if(pos.length && !pos.includes(p.p)) return false;
+  if(br.length && !br.includes(p.br)) return false;
+  return true;
+}
+function toggleFilter(f){
+  if(f==='ALL'){ picked.clear(); }
+  else if(picked.has(f)){ picked.delete(f); }
+  else { picked.add(f); }
+  renderFilters(); renderBoard();
 }
 
 /* ---------- setup ---------- */
@@ -1279,7 +1298,7 @@ document.addEventListener('click', e=>{
   const b=e.target.closest('[data-act="pick"]'); if(b){ draft(b.dataset.i); return; }
   const m=e.target.closest('[data-me]'); if(m){ me=+m.dataset.me; save(); renderSetup(); renderAll(); return; }
   const tb=e.target.closest('[data-pane]'); if(tb){ showPane(tb.dataset.pane); return; }
-  const c=e.target.closest('[data-f]'); if(c){ filter=c.dataset.f; renderFilters(); renderBoard(); return; }
+  const c=e.target.closest('[data-f]'); if(c){ toggleFilter(c.dataset.f); return; }
   const row=e.target.closest('.row'); if(row){ const i=+row.dataset.i;
     openNote=(openNote===i?null:i); renderBoard(); return; }
   const sim=e.target.closest('[data-sim]');
