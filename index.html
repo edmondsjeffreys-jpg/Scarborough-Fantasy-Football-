@@ -104,6 +104,10 @@ details.setup[open] summary::before{content:'▾'}
 .teampick{display:flex;align-items:center;gap:8px;margin:2px 0 10px;
  font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--dim);
  letter-spacing:.1em;text-transform:uppercase}
+#dataBox{width:100%;background:var(--panel2);color:var(--paper);border:1px solid var(--line);
+ border-radius:3px;padding:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;
+ margin-top:10px;resize:vertical}
+#dataBox:focus{outline:none;border-color:var(--te)}
 .teampick select{flex:1;min-width:0;background:var(--panel2);color:var(--paper);
  border:1px solid var(--line);border-radius:2px;padding:8px 9px;
  font-family:'Barlow Condensed',sans-serif;font-size:15px}
@@ -283,6 +287,7 @@ footer{position:fixed;bottom:0;left:0;right:0;background:var(--ink);border-top:1
     <button class="tab" data-pane="rosters" aria-pressed="false">Rosters</button>
     <button class="tab" data-pane="log" aria-pressed="false">Draft log</button>
     <button class="tab" data-pane="study" id="tabStudy" aria-pressed="false" style="display:none">Slot study</button>
+    <button class="tab" data-pane="data" aria-pressed="false">Data</button>
   </nav>
 </header>
 
@@ -374,6 +379,23 @@ footer{position:fixed;bottom:0;left:0;right:0;background:var(--ink);border-top:1
         <button class="btn go" id="runStudy">Run all 12 slots</button>
       </div>
       <div id="studyout" style="margin-top:13px"></div>
+    </div>
+  </section>
+
+  <section id="paneData" class="hide">
+    <div class="panel" style="margin-top:0">
+      <div class="secthead"><h2>Data</h2><span class="hint" id="dataStamp"></span></div>
+      <p class="sub" style="margin:8px 0 0;line-height:1.7">Paste an update from Claude below and hit Apply. No rebuild, no re-upload, no cache to fight — it saves in this browser and loads every time.</p>
+      <textarea id="dataBox" rows="6" placeholder="Paste the update block here…"></textarea>
+      <div class="brow" style="margin-top:9px">
+        <button class="btn go" id="dataApply">Apply update</button>
+        <button class="btn" id="dataRevert">Revert to built-in</button>
+      </div>
+      <div id="dataMsg" class="sub" style="margin-top:10px;line-height:1.6"></div>
+    </div>
+    <div class="panel">
+      <div class="secthead"><h2>What an update can change</h2></div>
+      <p class="sub" style="line-height:1.8">ADP &middot; expert ranks &middot; my rank &middot; offence rank &middot; O-line rank &middot; strength of schedule &middot; injury notes &middot; flags &middot; bridge windows. Anything not in the update keeps its current value, so a small paste is fine.</p>
     </div>
   </section>
 
@@ -903,6 +925,60 @@ function renderRecs(){
   ).join('') : '<div class="empty-state">Nobody left to recommend.</div>';
 }
 
+/* ---------- in-app data updates ----------
+   The board is baked into this file, so refreshing it used to mean a rebuild,
+   a download, a re-upload and a cache fight. Instead an update is a small JSON
+   patch: paste it, it applies to the players by name and persists here. */
+const DKEY = SKEY + '_data';
+let dataStamp = 'built in';
+
+function applyPatch(patch, quiet){
+  if(!patch || !Array.isArray(patch.players)) throw new Error('no players array');
+  const byName = {}; P.forEach(p=>byName[p.n]=p);
+  let hit=0, missed=[];
+  patch.players.forEach(u=>{
+    const p = byName[u.n];
+    if(!p){ missed.push(u.n); return; }
+    hit++;
+    // only overwrite what the patch actually carries
+    if(u.adp!==undefined) p.adp=u.adp;
+    if(u.ex!==undefined)  p.ex=u.ex;
+    if(u.r!==undefined)   p.r=u.r;
+    if(u.a!==undefined)   p.a=u.a;
+    if(u.o!==undefined)   p.o=u.o;
+    if(u.ol!==undefined)  p.ol=u.ol;
+    if(u.s!==undefined)   p.s=u.s;
+    if(u.f!==undefined)   p.f=u.f;
+    if(u.note!==undefined)p.note=u.note;
+    if(u.br!==undefined){ p.br=u.br; p.bw=u.bw||p.bw; p.bn=u.bn||p.bn; }
+    if(u.pts!==undefined){ p.pts=u.pts; }
+    if(u.v!==undefined){ p.v=u.v; }
+  });
+  P.sort((a,b)=>a.a-b.a);
+  P.forEach((p,i)=>{ p.bp=i+1; });
+  dataStamp = patch.stamp || 'updated';
+  if(!quiet){
+    $('dataMsg').innerHTML = '<b style="color:var(--good)">Applied.</b> '+hit
+      +' players updated'+(missed.length? ', '+missed.length+' name'
+      +(missed.length===1?'':'s')+' not on the board: '+missed.slice(0,4).join(', ')
+      +(missed.length>4?'…':'') : '')+'. Stamp: '+dataStamp;
+  }
+  return {hit, missed};
+}
+async function saveData(txt){
+  try{ if(window.storage) await withTimeout(window.storage.set(DKEY, txt), 1500); }catch(e){}
+}
+async function loadData(){
+  try{
+    if(!window.storage) return;
+    const r = await withTimeout(window.storage.get(DKEY), 1500);
+    if(r && r.value){ applyPatch(JSON.parse(r.value), true); }
+  }catch(e){}
+}
+function renderData(){
+  const el=$('dataStamp'); if(el) el.textContent = dataStamp;
+}
+
 /* ---------- slot study ----------
    Runs a complete auto-draft from each slot, several times, and compares the
    slots against EACH OTHER at every lineup position. Ranking positions inside
@@ -1181,7 +1257,7 @@ function renderSetup(){
 /* ---------- roster + needs ---------- */
 function showPane(p){
   pane = p;
-  ['board','rosters','log','study'].forEach(x=>{
+  ['board','rosters','log','study','data'].forEach(x=>{
     const el=$('pane'+x.charAt(0).toUpperCase()+x.slice(1));
     if(el) el.classList.toggle('hide', x!==p);
   });
@@ -1324,6 +1400,24 @@ function renderSetup2(){ if(me) renderSetup(); }
 $('undo').onclick=()=>{ picks.pop(); simCache=null; save(); renderAll(); };
 $('runsim').onclick=doSim;
 if($('runStudy')) $('runStudy').onclick=runSlotStudy;
+if($('dataApply')) $('dataApply').onclick=()=>{
+  const txt=$('dataBox').value.trim();
+  if(!txt){ $('dataMsg').textContent='Paste an update first.'; return; }
+  try{
+    const patch=JSON.parse(txt);
+    applyPatch(patch);
+    saveData(txt);
+    simCache=null; renderAll(); renderData();
+  }catch(e){
+    $('dataMsg').innerHTML='<b style="color:var(--bad)">Could not read that.</b> '
+      +'Paste the whole block Claude gave you, including the outer braces. ('+e.message+')';
+  }
+};
+if($('dataRevert')) $('dataRevert').onclick=()=>{
+  if(!confirm('Discard the pasted update and go back to the data built into this file?')) return;
+  try{ if(window.storage) window.storage.delete(DKEY); }catch(e){}
+  $('dataMsg').innerHTML='Reverted. <b>Reload the page</b> to load the built-in board.';
+};
 if($('grade')) $('grade').onclick=()=>{
   if(!me){ alert('Tap ME on your slot first.'); return; }
   if(!picks.length){ alert('Log some picks first.'); return; }
@@ -1382,7 +1476,7 @@ function boot(){
     if(!names.some(Boolean)){ PRESET.forEach((n,k)=>names[k+1]=n); }
     if(!me) me = Math.max(1, PRESET.indexOf('Vandelay Industries')+1);
   }
-  renderSetup(); renderFilters(); renderAll(); showPane(pane);
+  renderSetup(); renderFilters(); renderAll(); renderData(); showPane(pane);
   if(me) $('setup').open = false;
 }
 
@@ -1390,7 +1484,9 @@ function boot(){
    before the first render meant that in any environment where the storage
    promise never settled, the page loaded completely empty. */
 try { boot(); } catch(e){ console.error('boot failed', e); }
-load().then(()=>{ try{ boot(); }catch(e){} }).catch(()=>{});
+Promise.all([load(), loadData()])
+  .then(()=>{ try{ boot(); }catch(e){} })
+  .catch(()=>{});
 </script>
 </body>
 </html>
