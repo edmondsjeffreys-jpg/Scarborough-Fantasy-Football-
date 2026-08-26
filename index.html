@@ -104,9 +104,9 @@ details.setup[open] summary::before{content:'▾'}
 .teampick{display:flex;align-items:center;gap:8px;margin:2px 0 10px;
  font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--dim);
  letter-spacing:.1em;text-transform:uppercase}
-#dataBox{width:100%;background:var(--panel2);color:var(--paper);border:1px solid var(--line);
- border-radius:3px;padding:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;
- margin-top:10px;resize:vertical}
+#dataBox{width:100%;background:var(--panel2);color:var(--paper);border:2px solid var(--te);
+ border-radius:3px;padding:11px;font-family:'IBM Plex Mono',monospace;font-size:12px;
+ margin-top:10px;resize:vertical;-webkit-appearance:none}
 #dataBox:focus{outline:none;border-color:var(--te)}
 .teampick select{flex:1;min-width:0;background:var(--panel2);color:var(--paper);
  border:1px solid var(--line);border-radius:2px;padding:8px 9px;
@@ -384,14 +384,14 @@ footer{position:fixed;bottom:0;left:0;right:0;background:var(--ink);border-top:1
 
   <section id="paneData" class="hide">
     <div class="panel" style="margin-top:0">
-      <div class="secthead"><h2>Data</h2><span class="hint" id="dataStamp"></span></div>
-      <p class="sub" style="margin:8px 0 0;line-height:1.7">Paste an update from Claude below and hit Apply. No rebuild, no re-upload, no cache to fight — it saves in this browser and loads every time.</p>
-      <textarea id="dataBox" rows="6" placeholder="Paste the update block here…"></textarea>
+      <div class="secthead"><h2>Paste an update</h2><span class="hint" id="dataStamp"></span></div>
+      <textarea id="dataBox" rows="7" placeholder="Paste the block Claude gave you here, then tap Apply update."></textarea>
       <div class="brow" style="margin-top:9px">
         <button class="btn go" id="dataApply">Apply update</button>
         <button class="btn" id="dataRevert">Revert to built-in</button>
       </div>
       <div id="dataMsg" class="sub" style="margin-top:10px;line-height:1.6"></div>
+      <p class="sub" style="margin:12px 0 0;line-height:1.7">Saves in this browser and reloads every time. No rebuild, no re-upload, no cache to fight.</p>
     </div>
     <div class="panel">
       <div class="secthead"><h2>What an update can change</h2></div>
@@ -1263,6 +1263,9 @@ function showPane(p){
   });
   document.querySelectorAll('.tab').forEach(t=>
     t.setAttribute('aria-pressed', String(t.dataset.pane===p)));
+  // Switching tabs used to leave you wherever you had scrolled to, so the top
+  // of the new pane was off screen. Jump back up.
+  try{ window.scrollTo(0,0); }catch(e){}
   save();
 }
 function renderTabs(){
