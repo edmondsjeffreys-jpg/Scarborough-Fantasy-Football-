@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>War Room Sandbox v2.3 · built 18 Aug 2026</title>
+<title>War Room Sandbox v2.4 · built 18 Aug 2026</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -271,7 +271,7 @@ footer{position:fixed;bottom:0;left:0;right:0;background:var(--ink);border-top:1
     <div class="mast">
       <div>
         <div class="brand">War Room <em>Sandbox</em></div>
-        <div class="sub">Practice mode &middot; simulated room &middot; separate from your live draft &nbsp;&middot;&nbsp; <span class="ver">v2.3 · built 18 Aug 2026</span></div>
+        <div class="sub">Practice mode &middot; simulated room &middot; separate from your live draft &nbsp;&middot;&nbsp; <span class="ver">v2.4 · built 18 Aug 2026</span></div>
       </div>
       <div class="counts">
         <div><b id="cPick">1</b><span>Pick</span></div>
@@ -897,7 +897,7 @@ function renderRecs(){
   const onSlot = slotOnClock(picks.length);
   const mine = me && onSlot===me;
   const rp = $('recpanel');
-  rp.style.display = me ? 'block' : 'none';
+  rp.style.display = (me && pane==='board') ? 'block' : 'none';
   if(rp.open !== recOpen) rp.open = recOpen;
   if(!rp.dataset.wired){                      // wire the toggle exactly once
     rp.dataset.wired = '1';
@@ -1263,8 +1263,15 @@ function showPane(p){
   });
   document.querySelectorAll('.tab').forEach(t=>
     t.setAttribute('aria-pressed', String(t.dataset.pane===p)));
-  // Switching tabs used to leave you wherever you had scrolled to, so the top
-  // of the new pane was off screen. Jump back up.
+  /* The sandbox bar, setup panel and recommendation panel live ABOVE the panes
+     and used to render on every tab, so switching to Data still put a screen
+     and a half of board content in front of the paste box. Each tab is now a
+     single-purpose view: those three belong to the Board only. */
+  const boardOnly = (p === 'board');
+  [['sandbar', SANDBOX], ['setup', true], ['recpanel', true]].forEach(([id, allowed])=>{
+    const el = $(id);
+    if(el) el.style.display = (boardOnly && allowed) ? (id==='recpanel' ? '' : 'block') : 'none';
+  });
   try{ window.scrollTo(0,0); }catch(e){}
   save();
 }
@@ -1469,7 +1476,7 @@ function boot(){
   if(!names.some(Boolean)){ PRESET.forEach((n,k)=>names[k+1]=n); }
   if(!me) me = MY_SLOT;
   if(SANDBOX){
-    $('sandbar').style.display='block';
+    $('sandbar').style.display = (pane==='board') ? 'block' : 'none';
     // Duplicate the most-used control so it is reachable without scrolling
     ['simturnFoot','simturnBoard','grade','tabStudy'].forEach(id=>{
       const el=$(id); if(el) el.style.display='inline-block';
